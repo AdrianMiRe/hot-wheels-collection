@@ -17,17 +17,35 @@ interface CarProps {
 export const resolvers = {
   Query: {
     cars: async () => {
-      return await prisma.car.findMany();
+      const cars = await prisma.car.findMany();
+      return cars.map((car) => ({
+        ...car,
+        blisterType: car.blister_type,
+        imageUrl: car.image_url,
+        isPremium: car.is_premium,
+        master_brand: car.master_brand,
+      }));
     },
     car: async (parent: any, { id }: { id: string }) => {
-      return await prisma.car.findUnique({
+      const car = await prisma.car.findUnique({
         where: { id },
       });
+
+      if (car) {
+        return {
+          ...car,
+          blisterType: car.blister_type,
+          imageUrl: car.image_url,
+          isPremium: car.is_premium,
+          masterBrand: car.master_brand,
+        }
+      }
+      return null;
     },
   },
   Mutation: {
     createCar: async (parent: any, { brand, model, year, color, collection, blisterType, imageUrl, isPremium, masterBrand }: CarProps) => {
-      return await prisma.car.create({
+      const car = await prisma.car.create({
         data: {
           brand,
           model,
@@ -37,15 +55,22 @@ export const resolvers = {
           blister_type: blisterType,
           image_url: imageUrl,
           is_premium: isPremium,
-          master_brand: masterBrand
+          master_brand: masterBrand,
         },
       });
+      return {
+        ...car,
+        blisterType: car.blister_type,
+        imageUrl: car.image_url,
+        isPremium: car.is_premium,
+        masterBrand: car.master_brand,
+      };
     },
     updateCar: async (parent: any, args: CarProps) => {
 
       const { id, brand, model, year, color, collection, blisterType, imageUrl, isPremium, masterBrand } = args;
 
-      return await prisma.car.update({
+      const car = await prisma.car.update({
         where: { id },
         data: {
           brand,
@@ -56,15 +81,28 @@ export const resolvers = {
           blister_type: blisterType,
           image_url: imageUrl,
           is_premium: isPremium,
-          master_brand: masterBrand
+          master_brand: masterBrand,
         },
       });
+      return {
+        ...car,
+        blisterType: car.blister_type,
+        imageUrl: car.image_url,
+        isPremium: car.is_premium,
+        masterBrand: car.master_brand,
+      };
     },
-    deleteCar: async (parent: any, args: CarProps) => {
-      const { id } = args;
-      return await prisma.car.delete({
+    deleteCar: async (parent: any, { id }: { id: string }) => {
+      const car = await prisma.car.delete({
         where: { id },
       });
+      return {
+        ...car,
+        blisterType: car.blister_type,
+        imageUrl: car.image_url,
+        isPremium: car.is_premium,
+        masterBrand: car.master_brand,
+      };
     },
   },
 };
