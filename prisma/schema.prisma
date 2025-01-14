@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model car {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand        String  @db.VarChar
+  model        String? @db.VarChar
+  year         Int?
+  color        String? @db.VarChar
+  collection   String? @db.VarChar
+  blister_type String? @db.VarChar
+  image_url    String? @db.VarChar
+  is_premium   Boolean
+  master_brand String?
+
+  @@index([brand])
+  @@index([collection])
+}
