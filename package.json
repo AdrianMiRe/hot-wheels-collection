@@ -7,7 +7,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix",
-		"postinstall": "prisma generate"
+		"postinstall": "npx prisma generate"
 	},
 	"dependencies": {
 		"@apollo/client": "^3.12.4",
