@@ -18,7 +18,7 @@ export const resolvers = {
   Query: {
     cars: async () => {
       const cars = await prisma.car.findMany();
-      return cars.map((car) => ({
+      return cars.map((car: any) => ({
         ...car,
         blisterType: car.blister_type,
         imageUrl: car.image_url,
