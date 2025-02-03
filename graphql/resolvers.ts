@@ -17,31 +17,58 @@ interface CarProps {
 export const resolvers = {
   Query: {
     cars: async () => {
-      const cars = await prisma.car.findMany();
+      const cars = await prisma.car.findMany({
+        include: {
+          car_brand: true,
+          principal_brand: true,
+          blister_type_car_blister_typeToblister_type: true
+        }
+      });
       return cars.map((car: any) => ({
         ...car,
-        blisterType: car.blister_type,
+        brand: car.car_brand.brand,
+        blisterType: car.blister_type_car_blister_typeToblister_type.blister,
         imageUrl: car.image_url,
         isPremium: car.is_premium,
-        master_brand: car.master_brand,
+        master_brand: car.principal_brand.brand,
       }));
     },
     car: async (parent: any, { id }: { id: string }) => {
       const car = await prisma.car.findUnique({
         where: { id },
+        include: {
+          car_brand: true,
+          principal_brand: true,
+          blister_type_car_blister_typeToblister_type: true
+        }
       });
+
+      console.log(car);
 
       if (car) {
         return {
           ...car,
-          blisterType: car.blister_type,
+          brand: car.car_brand.brand,
+          blisterType: car.blister_type_car_blister_typeToblister_type?.blister,
           imageUrl: car.image_url,
           isPremium: car.is_premium,
-          masterBrand: car.master_brand,
+          master_brand: car.principal_brand?.brand
         }
       }
       return null;
     },
+    masterBrands: async() => {
+      const brands = await prisma.principal_brand.findMany();
+      return brands;
+    },
+    carBrands: async() => {
+      const carBrands = await prisma.car_brand.findMany();
+      return carBrands;
+    },
+    blisterType: async() => {
+      const blisterTypes = await prisma.blister_type.findMany();
+      return blisterTypes;
+    }
   },
   Mutation: {
     createCar: async (parent: any, { brand, model, year, color, collection, blisterType, imageUrl, isPremium, masterBrand }: CarProps) => {

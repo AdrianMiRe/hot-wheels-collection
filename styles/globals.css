@@ -2,8 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --font-red: #be2d31
+}
+
+@font-face {
+  font-family: 'heavy-heap';
+  src: url('/fonts/heavy-heap.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: 'heavy-heap';
+  color: var(--font-red);
+}
+
 h1 {
-  font-size: 2rem;
+  font-size: 3.5rem;
 }
 
 .uploadButton {

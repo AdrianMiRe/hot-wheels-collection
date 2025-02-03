@@ -10,17 +10,44 @@ datasource db {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model car {
-  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  brand        String  @db.VarChar
-  model        String? @db.VarChar
-  year         Int?
-  color        String? @db.VarChar
-  collection   String? @db.VarChar
-  blister_type String? @db.VarChar
-  image_url    String? @db.VarChar
-  is_premium   Boolean
-  master_brand String?
+  id                                          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand                                       String           @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  model                                       String?          @db.VarChar
+  year                                        Int?
+  color                                       String?          @db.VarChar
+  collection                                  String?          @db.VarChar
+  blister_type                                String?          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  image_url                                   String?          @db.VarChar
+  is_premium                                  Boolean
+  master_brand                                String?          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  blister_type_car_blister_typeToblister_type blister_type?    @relation("car_blister_typeToblister_type", fields: [blister_type], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  car_brand                                   car_brand        @relation(fields: [brand], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  principal_brand                             principal_brand? @relation(fields: [master_brand], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([brand])
   @@index([collection])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model blister_type {
+  id                                 String @id(map: "blister_types_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  blister                            String @db.VarChar
+  car_car_blister_typeToblister_type car[]  @relation("car_blister_typeToblister_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model car_brand {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand String @db.VarChar
+  car   car[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_brand {
+  id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand String @db.VarChar
+  car   car[]
 }
