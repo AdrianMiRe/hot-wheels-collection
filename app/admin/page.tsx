@@ -193,7 +193,7 @@ const Admin = () => {
               key={car.id}
               isPressable
               isFooterBlurred
-              className="w-[350] h-[350px] col-span-12 sm:col-span-5"
+              className="w-[350px] h-[350px] col-span-12 sm:col-span-5"
               onPress={() => {
                 setSelectedCar(car)
                 onOpen()
