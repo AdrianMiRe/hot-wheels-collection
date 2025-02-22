@@ -5,17 +5,22 @@ import { gql, useMutation, useLazyQuery } from "@apollo/client";
 import { Card, CardHeader, CardBody, CardFooter } from '@heroui/card';
 import { Image } from '@heroui/image';
 import { Button } from "@heroui/button";
-import { Form, Input, Alert, Select, SelectItem } from '@heroui/react';
-
 import {
+  Form,
+  Input,
+  Alert,
+  Select,
+  SelectItem,
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure
-} from '@heroui/modal';
-import { FormEvent, useCallback, useState, useEffect, useRef } from "react";
+  useDisclosure,
+  Checkbox
+} from '@heroui/react';
+
+import { FormEvent, useCallback, useState, useEffect, useRef, useReducer } from "react";
 import { CldUploadButton } from 'next-cloudinary';
 
 import { CarProps } from "@/interfaces/car";
@@ -28,6 +33,7 @@ import { GET_BLISTER } from "@/graphql/queries/blister";
 import { MasterBrandProps } from "@/interfaces/masterb";
 import { CarBrandProps } from "@/interfaces/carb";
 import { BlisterTypeProps } from "@/interfaces/blister";
+import { carReducer, initialState } from "@/state/carReducer";
 
 const Admin = () => {
   
@@ -63,8 +69,9 @@ const Admin = () => {
   const [masterBrands, setMasterBrands] = useState([]);
   const [carBrands, setCarBrands] = useState([]);
   const [blisterTypes, setBlisterTypes] = useState([]);
-
   const [alertType, setAlertType] = useState<'success' | 'danger' | 'default' | 'primary' | 'secondary' | 'warning'>('success');
+
+  const [state, dispatch] = useReducer(carReducer, initialState)
 
   const alertRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,30 +107,26 @@ const Admin = () => {
   
   const handleOnSuccess = useCallback((result: any) => {
     console.log(result.info.secure_url)
-    setUrl(result.info.secure_url)
+    dispatch({ type: 'SET_URL', payload: { url: result.info.secure_url } })
   }, [])
 
-  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.currentTarget));
-    console.log(data)
+  const sendCar = async () => {
     
     await saveCar({
       variables: {
-        brand: data.brand,
-        model: data.model,
-        year: parseInt(data.year.toString()),
-        color: data.color,
-        blisterType: data.blisterType,
-        imageUrl: data.url,
-        isPremium: data.isPremium === "on" ? true: false,
-        collection: data.collection,
-        masterBrand: data.masterBrand,
+        brand: state.car.brand,
+        model: state.car.model,
+        year: parseInt(state.car.year.toString()),
+        color: state.car.color,
+        blisterType: state.car.blisterType,
+        imageUrl: state.car.url,
+        isPremium: state.car.isPremium,
+        collection: state.car.collection,
+        masterBrand: state.car.masterBrand,
       },
       onCompleted: (data) => {
         const { brand, model, year } = data.createCar;
 
-        setUrl('');
         setTitle('Carrito guardado');
         setDescription(`${brand} ${model} ${year} guardado correctamente en la base`);
         queryCars({
@@ -142,7 +145,7 @@ const Admin = () => {
         setIsVisible(true)
       }
     })
-  };
+  }
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
@@ -235,16 +238,18 @@ const Admin = () => {
         }
       </div>
 
-      <Modal isOpen={isOpen} placement="top-center" onOpenChange={onOpenChange}>
+      <Modal
+        isOpen={isOpen}
+        placement="top-center"
+        onOpenChange={onOpenChange}
+        scrollBehavior="inside"
+
+      >
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1 text-white">{ selectedCar === null ? "Agregar carrito": `${selectedCar?.brand} ${selectedCar?.model}` } </ModalHeader>
-              <Form
-                className="w-full justify-center items-center space-y-4"
-                onSubmit={onSubmit}
-              >
-                <ModalBody>
+                <ModalBody className="max-h-full overflow-auto">
                   {
                     selectedCar !== null &&
                     <>
@@ -255,66 +260,110 @@ const Admin = () => {
                     </>
                   }
                   {
-                    selectedCar === null &&
-                    <>
+                    selectedCar === null &&                    
+                      <>
                         <Select
                           isRequired
                           label="Marca principal"
                           name="masterBrand"
                           labelPlacement="outside"
+                          value={state.car.masterBrand}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'masterBrand', value: e.target.value } }) }
                         >
                           {
                             masterBrands && masterBrands.map((mb: any) => (
                               <SelectItem
                               className="text-white"
                               key={mb.id}
-                              value={mb.id}
                               >
                                 {mb.brand}
                               </SelectItem>
                             ))
                           }
                         </Select>
+
                         <Select
                           isRequired
                           label="Marca"
                           name="brand"
                           labelPlacement="outside"
+                          value={state.car.brand}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'brand', value: e.target.value } }) }
                         >
                           {
                             carBrands && carBrands.map((cb: any) => (
                               <SelectItem
                                 className="text-white"
                                 key={cb.id}
-                                value={cb.id}
                               >
                                 {cb.brand}
                               </SelectItem>
                             ))
                           }
                         </Select>
-                        <Input classNames={{ input: 'capitalize' }} isRequired labelPlacement="outside" name="model" label="Modelo"/>
-                        <Input isRequired labelPlacement="outside" name="year" label="Año" type="number" />
-                        <Input classNames={{ input: "capitalize"}} labelPlacement="outside" name="color" label="Color" />
-                        <Input classNames={{ input: "capitalize"}} labelPlacement="outside" name="collection" label="Colección" />
+                        
+                        <Input
+                          isRequired
+                          classNames={{ input: 'capitalize' }}
+                          labelPlacement="outside"
+                          name="model"
+                          label="Modelo"
+                          value={state.car.model}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'model', value: e.target.value } }) }
+                        />
+                        <Input
+                          isRequired
+                          labelPlacement="outside"
+                          name="year"
+                          label="Año"
+                          type="number"
+                          value={state.car.year}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'year', value: e.target.value } }) }
+                        />
+                        <Input
+                          classNames={{ input: "capitalize"}}
+                          labelPlacement="outside"
+                          name="color"
+                          label="Color"
+                          value={state.car.color}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'color', value: e.target.value } }) }
+                        />
+                        <Input
+                          classNames={{ input: "capitalize"}}
+                          labelPlacement="outside"
+                          name="collection"
+                          label="Colección"
+                          value={state.car.collection}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'collection', value: e.target.value } }) }
+                        />
+                        
                         <Select
                           label="Blister"
                           name="blisterType"
                           labelPlacement="outside"
+                          value={state.car.blisterType}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'blisterType', value: e.target.value } }) }
                         >
                           {
                             blisterTypes && blisterTypes.map((bt: any) => (
                               <SelectItem
                                 className="text-white"
                                 key={bt.id}
-                                value={bt.id}
                               >
                                 {bt.blister}
                               </SelectItem>
                             ))
                           }
                         </Select>
-                        <div
+                        
+                        <Checkbox
+                          name="isPremium"
+                          isSelected={state.car.isPremium}
+                          onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'isPremium', value: e.target.checked} }) }
+                        >
+                          Es Premium
+                        </Checkbox>
+                        {/* <div
                           style={{
                             display: 'flex',
                             flexDirection: 'row',
@@ -323,9 +372,9 @@ const Admin = () => {
                         >
                           <input type="checkbox" id="cbox2" name="isPremium" />
                           <label className="text-white" htmlFor="cbox2">Es premium</label>
-                        </div>
+                        </div> */}
                         
-                        <Input readOnly name="url" value={url} label={"URL"} labelPlacement="outside" />
+                        <Input readOnly name="url" value={state.car.url} label={"URL"} labelPlacement="outside" />
 
                         <CldUploadButton 
                           onSuccess={handleOnSuccess}
@@ -334,20 +383,20 @@ const Admin = () => {
                         >
                           Cargar imagen
                         </CldUploadButton>
-                    </>
+                      </>
+                         
                   }
 
                 </ModalBody>
-
                 <ModalFooter>
                   <Button className="text-white" color="danger" variant="flat" onPress={onClose}>
                     Cerrar
                   </Button>
-                  <Button type="submit" color="primary" onPress={onClose}>
+                  
+                  <Button color="primary" onPress={() => sendCar()}>
                     { selectedCar === null ? 'Guardar': 'Actualizar' }
                   </Button>
                 </ModalFooter>
-              </Form>
             </>
           )}
         </ModalContent>

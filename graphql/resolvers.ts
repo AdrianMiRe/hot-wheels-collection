@@ -62,7 +62,11 @@ export const resolvers = {
       return brands;
     },
     carBrands: async() => {
-      const carBrands = await prisma.car_brand.findMany();
+      const carBrands = await prisma.car_brand.findMany({
+        orderBy: {
+          brand: 'asc'
+        }
+      });
       return carBrands;
     },
     blisterType: async() => {
@@ -84,9 +88,13 @@ export const resolvers = {
           is_premium: isPremium,
           master_brand: masterBrand,
         },
+        include: {
+          car_brand: true
+        }
       });
       return {
         ...car,
+        brand: car.car_brand.brand,
         blisterType: car.blister_type,
         imageUrl: car.image_url,
         isPremium: car.is_premium,
