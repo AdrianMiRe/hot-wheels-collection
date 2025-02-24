@@ -30,7 +30,7 @@ export const typeDefs = gql`
   }
 
   type Query {
-    cars: [Car]
+    cars(brands: [String] ): [Car]
     car(id: String!): Car
     masterBrands: [MasterBrand]
     carBrands: [CarBrand]

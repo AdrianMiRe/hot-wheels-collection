@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { Car } from "@/types";
 
 interface CarProps {
   id: string
@@ -16,22 +17,46 @@ interface CarProps {
 // Define resolvers to fetch data using Prisma
 export const resolvers = {
   Query: {
-    cars: async () => {
-      const cars = await prisma.car.findMany({
-        include: {
-          car_brand: true,
-          principal_brand: true,
-          blister_type_car_blister_typeToblister_type: true
-        }
-      });
-      return cars.map((car: any) => ({
-        ...car,
-        brand: car.car_brand.brand,
-        blisterType: car.blister_type_car_blister_typeToblister_type.blister,
-        imageUrl: car.image_url,
-        isPremium: car.is_premium,
-        master_brand: car.principal_brand.brand,
-      }));
+    cars: async (parent: any, { brands }: { brands: string[] }) => {
+      console.log(brands)
+      let cars: any = [];
+      try {
+
+        if (brands !== null )
+          cars = await prisma.car.findMany({
+            where: {
+              brand: { in: brands }
+            },
+            include: {
+              car_brand: true,
+              principal_brand: true,
+              blister_type_car_blister_typeToblister_type: true
+            }
+          });
+        else
+          cars = await prisma.car.findMany({
+            include: {
+              car_brand: true,
+              principal_brand: true,
+              blister_type_car_blister_typeToblister_type: true
+            }
+          });
+
+        if (!cars) throw new Error('No se encontraron carritos con las marcas elegidas')
+
+        return cars.map((car: any) => ({
+          ...car,
+          brand: car.car_brand.brand,
+          blisterType: car.blister_type_car_blister_typeToblister_type.blister,
+          imageUrl: car.image_url,
+          isPremium: car.is_premium,
+          master_brand: car.principal_brand.brand,
+        }));
+      } catch (error: any){
+        console.log(error)
+        throw new Error(error)
+      }
+
     },
     car: async (parent: any, { id }: { id: string }) => {
       const car = await prisma.car.findUnique({

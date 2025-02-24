@@ -20,7 +20,7 @@ import {
   Checkbox
 } from '@heroui/react';
 
-import { FormEvent, useCallback, useState, useEffect, useRef, useReducer } from "react";
+import { FormEvent, useCallback, useState, useEffect, useRef, useReducer, Suspense } from "react";
 import { CldUploadButton } from 'next-cloudinary';
 
 import { CarProps } from "@/interfaces/car";
@@ -36,7 +36,7 @@ import { BlisterTypeProps } from "@/interfaces/blister";
 import { carReducer, initialState } from "@/state/carReducer";
 
 const Admin = () => {
-  
+
   const [queryCars, { data, loading, error }] = useLazyQuery(GET_CARS,{
     fetchPolicy: 'network-only',
     nextFetchPolicy: 'network-only'
@@ -48,7 +48,7 @@ const Admin = () => {
     nextFetchPolicy: 'cache-and-network'
   });
 
-  const [queryBrands, { data: brandsData }] = useLazyQuery(GET_BRANDS, {
+  const [queryBrands, { data: brandsData, loading: brandsLoading }] = useLazyQuery(GET_BRANDS, {
     fetchPolicy: 'network-only',
     nextFetchPolicy: 'cache-and-network'
   });
@@ -70,13 +70,19 @@ const Admin = () => {
   const [carBrands, setCarBrands] = useState([]);
   const [blisterTypes, setBlisterTypes] = useState([]);
   const [alertType, setAlertType] = useState<'success' | 'danger' | 'default' | 'primary' | 'secondary' | 'warning'>('success');
+  const [brands, setBrands] = useState(new Set([]));
+
 
   const [state, dispatch] = useReducer(carReducer, initialState)
 
   const alertRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    queryCars();
+    queryCars({
+      variables: {
+        brands: null
+      }
+    });
   }, [])
 
   useEffect(() => {
@@ -104,14 +110,36 @@ const Admin = () => {
       }
     });
   }, [selectedCar])
-  
+
+  useEffect(() => {
+    if (brands.size === 0) {
+      queryCars({
+        variables: {
+          brands: null
+        }
+      });
+      return;
+    }
+    const qBrands = brands.values();
+
+    const qb = qBrands.toArray()
+
+    console.log(qb)
+
+    queryCars({
+      variables: {
+        brands: qb
+      }
+    })
+  }, [brands])
+
   const handleOnSuccess = useCallback((result: any) => {
     console.log(result.info.secure_url)
     dispatch({ type: 'SET_URL', payload: { url: result.info.secure_url } })
   }, [])
 
   const sendCar = async () => {
-    
+
     await saveCar({
       variables: {
         brand: state.car.brand,
@@ -147,96 +175,113 @@ const Admin = () => {
     })
   }
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
-
   return (
     <div>
       <div style={{ textAlign: 'center', marginTop: '1rem' }}>
         <h1 className="font-heavyHeap">Colección Hot Wheels</h1>
       </div>
 
-      <div
-        style={{
-          marginTop: '1rem',
-          padding: '1rem',
-          display: 'flex',
-          flexDirection: 'row',
-          gap: '24px',
-          flexWrap: 'wrap',
-          justifyContent: 'space-evenly'
-        }}
-      >
+      <div className="flex flex-col gap-4 md:gap-0 md:flex-row justify-between px-8">
+        <p className="font-heavyHeap text-xl tracking-wide text-center ">La colección tiene <strong>{ data && data.cars.length }</strong> carritos</p>
 
-        <Card
-          isPressable
-          isBlurred
-          className="h-[350px] w-[350px] col-span-12 sm:col-span-5"
+        <Select
+          isLoading={brandsLoading}
+          className="max-w-full md:max-w-xs"
+          label="Selecciona marca"
+          placeholder="Selecciona una marca"
+          selectedKeys={brands}
+          selectionMode="multiple"
+          onSelectionChange={setBrands}
+        >
+        { brandsData && brandsData.carBrands.map((brand: CarBrandProps) => (
+          <SelectItem key={brand.id}>{brand.brand}</SelectItem>
+        ))}
+        </Select>
+      </div>
+
+      <Suspense fallback={"Cargando info"}>
+        <div
           style={{
-            backgroundColor: '#0057b8',
-            boxShadow: 'inset 4px 4px 8px 4px rgb(3, 67, 141), inset -4px -4px 8px 4px rgb(3, 67, 141)'
-          }}
-          onPress={() => {
-            setSelectedCar(null)
-            onOpen()
+            marginTop: '1rem',
+            padding: '1rem',
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '24px',
+            flexWrap: 'wrap',
+            justifyContent: 'space-evenly'
           }}
         >
-          <CardBody
-            className="justify-center items-center"
+
+          <Card
+            isPressable
+            isBlurred
+            className="h-[350px] w-[350px] col-span-12 sm:col-span-5"
+            style={{
+              backgroundColor: '#0057b8',
+              boxShadow: 'inset 4px 4px 8px 4px rgb(3, 67, 141), inset -4px -4px 8px 4px rgb(3, 67, 141)'
+            }}
+            onPress={() => {
+              setSelectedCar(null)
+              onOpen()
+            }}
           >
-            <Image
-              src="/agregar.png"
-            />
-          </CardBody>
-        </Card>
-
-        {
-          data && data.cars.map((car: any) => (
-            <Card
-              key={car.id}
-              isPressable
-              isFooterBlurred
-              className="w-[350px] h-[350px] col-span-12 sm:col-span-5"
-              onPress={() => {
-                setSelectedCar(car)
-                onOpen()
-              }}
+            <CardBody
+              className="justify-center items-center"
             >
-              <CardHeader className="absolute z-10 flex-col items-start bg-blue-500/40 border-b-1 border-zinc-100/50 backdrop-filter backdrop-blur-sm bg-opacity-0 ">
-                <p className="font-heavyHeap text-red-800 text-lg uppercase tracking-wider">{car.year}</p>
-                <h4 className="font-heavyHeap text-red-800 tracking-widest text-3xl italic">{`${car.brand} ${car.model}`}</h4>
-              </CardHeader>
               <Image
-                removeWrapper
-                alt="Card example background"
-                className="z-0 w-full h-full scale-125 -translate-y-6 object-cover"
-                src={car.image_url}
+                src="/agregar.png"
               />
-              <CardFooter className="justify-between bg-blue-400/20 border-white/20 border-1 overflow-hidden py-1 absolute before:rounded-xl rounded-large bottom-1 w-[calc(100%_-_8px)] shadow-small ml-1 z-10">
-                <div className="flex justify-between w-full px-3">
-                  <div className="flex flex-col gap-2 items-start">
-                    <p className="font-heavyHeap text-red-800 text-xl tracking-wider">{car.master_brand}</p>
-                    <p className="font-heavyHeap text-red-800 text-md tracking-widest">{car.collection}</p>
-                  </div>
-                  <div className="flex items-center">
-                  
-                    {
-                      car.is_premium && 
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="gold" className="size-8">
-                        <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
-                      </svg>
-                    }
+            </CardBody>
+          </Card>
 
+          {
+            data && data.cars.map((car: any) => (
+              <Card
+                key={car.id}
+                isPressable
+                isFooterBlurred
+                className="w-[350px] h-[350px] col-span-12 sm:col-span-5"
+                onPress={() => {
+                  setSelectedCar(car)
+                  onOpen()
+                }}
+              >
+                <CardHeader className="absolute z-10 flex-col items-start bg-blue-500/40 border-b-1 border-zinc-100/50 backdrop-filter backdrop-blur-sm bg-opacity-0 ">
+                  <p className="font-heavyHeap text-red-800 text-lg uppercase tracking-wider">{car.year}</p>
+                  <h4 className="font-heavyHeap text-red-800 tracking-widest text-3xl italic">{`${car.brand} ${car.model}`}</h4>
+                </CardHeader>
+                <Image
+                  removeWrapper
+                  alt="Card example background"
+                  className="z-0 w-full h-full scale-125 -translate-y-6 object-cover"
+                  src={car.image_url}
+                />
+                <CardFooter className="justify-between bg-blue-400/20 border-white/20 border-1 overflow-hidden py-1 absolute before:rounded-xl rounded-large bottom-1 w-[calc(100%_-_8px)] shadow-small ml-1 z-10">
+                  <div className="flex justify-between w-full px-3">
+                    <div className="flex flex-col gap-2 items-start">
+                      <p className="font-heavyHeap text-red-800 text-xl tracking-wider">{car.master_brand}</p>
+                      <p className="font-heavyHeap text-red-800 text-md tracking-widest">{car.collection}</p>
+                    </div>
+                    <div className="flex items-center">
+
+                      {
+                        car.is_premium &&
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="gold" className="size-8">
+                          <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813A3.75 3.75 0 0 0 7.466 7.89l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
+                        </svg>
+                      }
+
+                    </div>
                   </div>
-                </div>
-                {/* <Button className="text-tiny" color="primary" radius="full" size="sm">
-                  Notify Me
-                </Button> */}
-              </CardFooter>
-            </Card>
-          ))
-        }
-      </div>
+                  {/* <Button className="text-tiny" color="primary" radius="full" size="sm">
+                    Notify Me
+                  </Button> */}
+                </CardFooter>
+              </Card>
+            ))
+          }
+        </div>
+      </Suspense>
 
       <Modal
         isOpen={isOpen}
@@ -260,7 +305,7 @@ const Admin = () => {
                     </>
                   }
                   {
-                    selectedCar === null &&                    
+                    selectedCar === null &&
                       <>
                         <Select
                           isRequired
@@ -301,7 +346,7 @@ const Admin = () => {
                             ))
                           }
                         </Select>
-                        
+
                         <Input
                           isRequired
                           classNames={{ input: 'capitalize' }}
@@ -336,7 +381,7 @@ const Admin = () => {
                           value={state.car.collection}
                           onChange={ (e) => dispatch({ type: 'UPDATE_FIELD', payload: { field: 'collection', value: e.target.value } }) }
                         />
-                        
+
                         <Select
                           label="Blister"
                           name="blisterType"
@@ -355,7 +400,7 @@ const Admin = () => {
                             ))
                           }
                         </Select>
-                        
+
                         <Checkbox
                           name="isPremium"
                           isSelected={state.car.isPremium}
@@ -373,10 +418,10 @@ const Admin = () => {
                           <input type="checkbox" id="cbox2" name="isPremium" />
                           <label className="text-white" htmlFor="cbox2">Es premium</label>
                         </div> */}
-                        
+
                         <Input readOnly name="url" value={state.car.url} label={"URL"} labelPlacement="outside" />
 
-                        <CldUploadButton 
+                        <CldUploadButton
                           onSuccess={handleOnSuccess}
                           uploadPreset="hw_preset"
                           className="uploadButton text-white"
@@ -384,7 +429,7 @@ const Admin = () => {
                           Cargar imagen
                         </CldUploadButton>
                       </>
-                         
+
                   }
 
                 </ModalBody>
@@ -392,7 +437,7 @@ const Admin = () => {
                   <Button className="text-white" color="danger" variant="flat" onPress={onClose}>
                     Cerrar
                   </Button>
-                  
+
                   <Button color="primary" onPress={() => sendCar()}>
                     { selectedCar === null ? 'Guardar': 'Actualizar' }
                   </Button>
