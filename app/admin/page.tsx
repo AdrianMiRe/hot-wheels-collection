@@ -17,7 +17,8 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Checkbox
+  Checkbox,
+  SharedSelection
 } from '@heroui/react';
 
 import { FormEvent, useCallback, useState, useEffect, useRef, useReducer, Suspense } from "react";
@@ -70,8 +71,7 @@ const Admin = () => {
   const [carBrands, setCarBrands] = useState([]);
   const [blisterTypes, setBlisterTypes] = useState([]);
   const [alertType, setAlertType] = useState<'success' | 'danger' | 'default' | 'primary' | 'secondary' | 'warning'>('success');
-  const [brands, setBrands] = useState(new Set([]));
-
+  const [brands, setBrands] = useState<SharedSelection>(new Set());
 
   const [state, dispatch] = useReducer(carReducer, initialState)
 
