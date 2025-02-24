@@ -1,12 +1,11 @@
 "use client";
 
-import { gql, useMutation, useLazyQuery } from "@apollo/client";
+import { useMutation, useLazyQuery } from "@apollo/client";
 
 import { Card, CardHeader, CardBody, CardFooter } from '@heroui/card';
 import { Image } from '@heroui/image';
 import { Button } from "@heroui/button";
 import {
-  Form,
   Input,
   Alert,
   Select,
@@ -21,19 +20,16 @@ import {
   SharedSelection
 } from '@heroui/react';
 
-import { FormEvent, useCallback, useState, useEffect, useRef, useReducer, Suspense } from "react";
+import { useCallback, useState, useEffect, useRef, useReducer, Suspense } from "react";
 import { CldUploadButton } from 'next-cloudinary';
 
 import { CarProps } from "@/interfaces/car";
-import { CarForm } from "@/interfaces/form";
 import { GET_CARS } from "@/graphql/queries/car";
 import { SAVE_CAR } from "@/graphql/mutations/car";
 import { GET_MASTER_BRANDS } from "@/graphql/queries/masterBrand";
 import { GET_BRANDS } from "@/graphql/queries/brand";
 import { GET_BLISTER } from "@/graphql/queries/blister";
-import { MasterBrandProps } from "@/interfaces/masterb";
 import { CarBrandProps } from "@/interfaces/carb";
-import { BlisterTypeProps } from "@/interfaces/blister";
 import { carReducer, initialState } from "@/state/carReducer";
 
 const Admin = () => {
@@ -63,7 +59,6 @@ const Admin = () => {
 
   const {isOpen, onOpen, onOpenChange} = useDisclosure();
   const [selectedCar, setSelectedCar] = useState<CarProps| null>();
-  const [url, setUrl] = useState('');
   const [isVisible, setIsVisible] = useState(false);
   const [description, setDescription] = useState('');
   const [title, setTitle] = useState('');
@@ -71,7 +66,7 @@ const Admin = () => {
   const [carBrands, setCarBrands] = useState([]);
   const [blisterTypes, setBlisterTypes] = useState([]);
   const [alertType, setAlertType] = useState<'success' | 'danger' | 'default' | 'primary' | 'secondary' | 'warning'>('success');
-  const [brands, setBrands] = useState<SharedSelection>(new Set());
+  const [brands, setBrands] = useState<Set<string>>(new Set());
 
   const [state, dispatch] = useReducer(carReducer, initialState)
 
@@ -175,6 +170,11 @@ const Admin = () => {
     })
   }
 
+  const handleSelectionChange = (selection: SharedSelection) => {
+    const newBrands = new Set(selection as unknown as Iterable<string>);
+    setBrands(newBrands);
+  };
+
   return (
     <div>
       <div style={{ textAlign: 'center', marginTop: '1rem' }}>
@@ -191,7 +191,7 @@ const Admin = () => {
           placeholder="Selecciona una marca"
           selectedKeys={brands}
           selectionMode="multiple"
-          onSelectionChange={setBrands}
+          onSelectionChange={handleSelectionChange}
         >
         { brandsData && brandsData.carBrands.map((brand: CarBrandProps) => (
           <SelectItem key={brand.id}>{brand.brand}</SelectItem>
